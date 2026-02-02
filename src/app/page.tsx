@@ -1,8 +1,28 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Head from 'next/head';
-import { Search, Filter, ShoppingCart, Star, Clock, Zap } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, Clock, Zap, Loader2 } from 'lucide-react';
 
 export default function Home() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const handleSearch = async () => {
+    if (!query) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setResults(data.results || []);
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <Head>
@@ -53,11 +73,18 @@ export default function Home() {
               </div>
               <input 
                 type="text" 
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Que recherchez-vous ? (ex: Ciment, Riz, Téléphone...)" 
                 className="block w-full pl-12 pr-4 py-5 bg-white border-2 border-slate-200 rounded-2xl text-lg focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-xl shadow-slate-200/50"
               />
-              <button className="absolute right-3 top-2.5 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all">
-                Comparer
+              <button 
+                onClick={handleSearch}
+                disabled={loading}
+                className="absolute right-3 top-2.5 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+              >
+                {loading ? <Loader2 className="animate-spin" /> : 'Comparer'}
               </button>
             </div>
           </div>
@@ -120,7 +147,9 @@ export default function Home() {
           {/* Results Grid */}
           <div className="flex-1">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-bold text-slate-800">Résultats de la comparaison</h2>
+              <h2 className="text-xl font-bold text-slate-800">
+                {results.length > 0 ? `${results.length} articles trouvés` : 'Résultats de la comparaison'}
+              </h2>
               <select className="text-sm bg-transparent border-none font-medium text-slate-600 focus:ring-0">
                 <option>Trier par : Moins cher</option>
                 <option>Trier par : Plus rapide</option>
@@ -128,28 +157,33 @@ export default function Home() {
               </select>
             </div>
 
-            {/* Empty State / Placeholder for search results */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-xl hover:border-indigo-200 transition-all group">
-                  <div className="aspect-square bg-slate-100 rounded-xl mb-4 overflow-hidden relative">
-                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-bold text-indigo-600 shadow-sm flex items-center gap-1">
-                      <Zap size={10} fill="currentColor" /> Meilleure Qualité
+            {results.length === 0 && !loading ? (
+              <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-20 text-center">
+                <p className="text-slate-400">Tapez un produit pour lancer la comparaison...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {results.map((item, i) => (
+                  <a key={i} href={item.link} target="_blank" rel="noopener noreferrer" className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-xl hover:border-indigo-200 transition-all group">
+                    <div className="aspect-square bg-slate-100 rounded-xl mb-4 overflow-hidden relative">
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-bold text-indigo-600 shadow-sm flex items-center gap-1">
+                        <Zap size={10} fill="currentColor" /> {item.source}
+                      </div>
                     </div>
-                  </div>
-                  <div className="mb-4">
-                    <div className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-1">Catégorie</div>
-                    <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">Nom de l'article #{i}</h3>
-                  </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                    <div className="text-lg font-black text-slate-900">25,000 XOF</div>
-                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                      <Clock size={12} /> 1 jour
+                    <div className="mb-4">
+                      <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors line-clamp-2">{item.name}</h3>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                      <div className="text-lg font-black text-slate-900">{item.price.toLocaleString()} XOF</div>
+                      <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                        <Clock size={12} /> Direct
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
           
         </div>
