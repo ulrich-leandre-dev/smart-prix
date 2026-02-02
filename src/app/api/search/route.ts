@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { scrapeJumia } from '@/lib/scraper';
+import { scrapeProducts } from '@/lib/scraper';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -9,6 +9,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Recherche vide' }, { status: 400 });
   }
 
-  const results = await scrapeJumia(query);
-  return NextResponse.json({ results });
+  try {
+    const results = await scrapeProducts(query);
+    return NextResponse.json({ results });
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json({ results: [], error: "Erreur lors de la recherche" }, { status: 500 });
+  }
 }
