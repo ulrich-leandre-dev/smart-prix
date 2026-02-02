@@ -24,3 +24,14 @@ export interface PriceRecord {
   is_available: boolean;
   updated_at: string;
 }
+
+// Correction : Ajout de l'export manquant pour le scraper
+export interface ScrapedProduct {
+  name: string;
+  price: number;
+  image: string;
+  link: string;
+  source: string;
+  delivery_time?: string;
+  rating?: number;
+}
